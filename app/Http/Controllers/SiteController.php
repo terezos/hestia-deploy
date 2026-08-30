@@ -511,7 +511,7 @@ class SiteController extends Controller
             $sshKeyPath  = $provisioning->sshHomeDir($site) . "/.ssh/id_rsa_{$safeKeyName}";
 
             $deployCommand = sprintf(
-                'GIT_SSH_COMMAND="ssh -i %s -o IdentitiesOnly=yes -o StrictHostKeyChecking=no" git --git-dir=%s --work-tree=%s fetch origin 2>&1 && git --git-dir=%s --work-tree=%s reset --hard origin/%s 2>&1; echo "EXIT:$?"',
+                'GIT_SSH_COMMAND="ssh -i %s -o IdentitiesOnly=yes -o StrictHostKeyChecking=no" git --git-dir=%s --work-tree=%s fetch origin 2>&1 && git --git-dir=%s --work-tree=%s reset --hard origin/%s 2>&1',
                 escapeshellarg($sshKeyPath),
                 escapeshellarg($bareRepo),
                 escapeshellarg($webRoot),
@@ -519,6 +519,33 @@ class SiteController extends Controller
                 escapeshellarg($webRoot),
                 escapeshellarg($site->branch)
             );
+
+            // Post-deploy fixups. The SSH account is root, so everything git just
+            // wrote is root-owned; PHP-FPM runs as the Hestia user and needs it back.
+            $postDeploy = [];
+
+            if ($site->framework === 'laravel') {
+                // Compiled config/services still describe the previous checkout.
+                $postDeploy[] = "rm -f {$webRoot}/bootstrap/cache/*.php";
+                $postDeploy[] = "rm -rf {$webRoot}/storage/framework/views/*.php";
+            }
+
+            if ($site->run_composer) {
+                $postDeploy[] = sprintf(
+                    'cd %s && /usr/bin/php%s /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction 2>&1',
+                    escapeshellarg($webRoot),
+                    $site->php_version
+                );
+            }
+
+            $postDeploy[] = sprintf(
+                'chown -R %s:%s %s',
+                $site->hestia_username,
+                $site->hestia_username,
+                escapeshellarg($webRoot)
+            );
+
+            $deployCommand .= ' && ' . implode(' && ', $postDeploy) . '; echo "EXIT:$?"';
 
             $site->addLog("Executing fetch + reset...");
             $output = $provisioning->sshExec($site, $deployCommand, 0);
