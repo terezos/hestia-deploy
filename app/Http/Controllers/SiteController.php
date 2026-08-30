@@ -525,12 +525,26 @@ class SiteController extends Controller
                 $postDeploy[] = "rm -rf {$webRoot}/storage/framework/views/*.php";
             }
 
-            if ($site->run_composer) {
-                $postDeploy[] = sprintf(
-                    'cd %s && /usr/bin/php%s /usr/local/bin/composer install --no-dev --optimize-autoloader --no-interaction 2>&1',
-                    escapeshellarg($webRoot),
-                    $site->php_version
-                );
+            // Mirrors ProvisioningService::provision(): WordPress never runs Composer.
+            $composerFrameworks = ['laravel', 'opencart_octopus', 'opencart_default'];
+
+            if ($site->run_composer && in_array($site->framework, $composerFrameworks, true)) {
+                // Repos differ on where composer.json lives: project root for Laravel,
+                // framework/ for the OpenCart layouts. Run wherever one exists, skip
+                // quietly where none does.
+                $flags = $site->framework === 'laravel'
+                    ? '--no-dev --optimize-autoloader'
+                    : '--ignore-platform-reqs';
+
+                foreach ([$webRoot, "{$webRoot}/framework"] as $dir) {
+                    $postDeploy[] = sprintf(
+                        'if [ -f %s/composer.json ]; then cd %s && /usr/bin/php%s /usr/local/bin/composer install %s --no-interaction 2>&1; fi',
+                        $dir,
+                        escapeshellarg($dir),
+                        $site->php_version,
+                        $flags
+                    );
+                }
             }
 
             $postDeploy[] = sprintf(

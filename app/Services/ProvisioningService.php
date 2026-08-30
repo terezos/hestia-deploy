@@ -450,6 +450,15 @@ class ProvisioningService
         }
     }
 
+    protected function hestiaUserHomeExists(string $username): bool
+    {
+        try {
+            return trim($this->sshCommand("test -d /home/{$username}/web && echo yes || echo no")) === 'yes';
+        } catch (Exception) {
+            return false;
+        }
+    }
+
     /**
      * Create an isolated HestiaCP user to own this domain's web/database resources.
      * @throws Exception
@@ -457,6 +466,16 @@ class ProvisioningService
     protected function createHestiaUser(Site $site): void
     {
         if ($this->hestiaUserExists($site->hestia_username)) {
+            // A Hestia user record can outlive its home directory (half-finished
+            // delete, manual rm -rf). Every later step then fails with a confusing
+            // pile of "No such file or directory", so stop here with the real cause.
+            if (! $this->hestiaUserHomeExists($site->hestia_username)) {
+                throw new Exception(
+                    "HestiaCP user '{$site->hestia_username}' exists but /home/{$site->hestia_username} is missing. "
+                    . "Remove the stale user on the server with: v-delete-user {$site->hestia_username}"
+                );
+            }
+
             $site->addLog("👤 Attaching to existing HestiaCP user: {$site->hestia_username}");
             return;
         }
