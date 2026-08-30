@@ -45,7 +45,7 @@ class RegistrationTest extends TestCase
 
         $response = $this->post('/register', [
             'name' => 'Test User',
-            'email' => 'test@eight8.gr',
+            'email' => 'test@example.com',
             'password' => 'password',
             'password_confirmation' => 'password',
             'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature(),
@@ -61,7 +61,7 @@ class RegistrationTest extends TestCase
             $this->markTestSkipped('Registration support is not enabled.');
         }
 
-        config(['hestia.allowed_email_domains' => ['eight8.gr']]);
+        config(['hestia.allowed_email_domains' => ['example.com']]);
         $this->seed(RolesAndPermissionsSeeder::class);
 
         $this->post('/register', [

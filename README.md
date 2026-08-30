@@ -74,7 +74,7 @@ in `.env`.
 
 | Key | Default | What |
 | --- | --- | --- |
-| `HESTIA_ALLOWED_EMAIL_DOMAINS` | `eight8.gr` | Comma-separated domains allowed to self-register. Empty = any domain. |
+| `HESTIA_ALLOWED_EMAIL_DOMAINS` | empty | Comma-separated domains allowed to self-register. Empty = any domain. |
 | `HESTIA_WEBHOOK_HEADER_TOKEN` | `HESTIACP` | Shared secret expected in the `X-Gitlab-Token` header on deploy webhooks. Change it. |
 
 Per-server settings (panel URL, API keys, SSH host/user/key, GitLab token) live

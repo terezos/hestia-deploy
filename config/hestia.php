@@ -9,13 +9,13 @@ return [
     |
     | Self-registration is restricted to these email domains. Set to an empty
     | list to allow any domain. Comma-separated in the environment, e.g.
-    | HESTIA_ALLOWED_EMAIL_DOMAINS="eight8.gr,example.com"
+    | HESTIA_ALLOWED_EMAIL_DOMAINS="example.com"
     |
     */
 
     'allowed_email_domains' => array_values(array_filter(array_map(
         'trim',
-        explode(',', (string) env('HESTIA_ALLOWED_EMAIL_DOMAINS', 'eight8.gr'))
+        explode(',', (string) env('HESTIA_ALLOWED_EMAIL_DOMAINS'))
     ))),
 
     /*

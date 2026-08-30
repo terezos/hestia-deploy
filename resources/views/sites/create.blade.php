@@ -34,7 +34,7 @@
                         <div class="mb-6">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Domain Name *</label>
                             <input type="text" name="domain" id="domain" value="{{ old('domain') }}"
-                                   placeholder="example.eight8.dev"
+                                   placeholder="example.com"
                                    class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                                    required>
                             <p class="text-xs text-gray-500 mt-1.5">Enter the full domain name for your site</p>

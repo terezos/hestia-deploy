@@ -1,6 +1,6 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "eight8/hestiacp-panel",
+    "name": "hestiacp/provisioning-panel",
     "type": "project",
     "description": "HestiaCP provisioning panel: multi-server site deployment, git deploy keys, webhooks, SSL and backups.",
     "keywords": [
