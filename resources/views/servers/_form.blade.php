@@ -107,11 +107,12 @@
     <h3 class="text-lg font-semibold text-gray-900 mb-4">Other Settings</h3>
 
     <div class="mb-6">
-        <label class="block text-sm font-semibold text-gray-700 mb-2">GitLab Deploy Token</label>
-        <input type="password" name="gitlab_token"
+        <label class="block text-sm font-semibold text-gray-700 mb-2">Git Token</label>
+        <input type="password" name="git_token"
                placeholder="{{ $isEdit ? 'Leave blank to keep current token' : '' }}"
                class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150">
-        @error('gitlab_token')
+        <p class="text-xs text-gray-500 mt-1.5">Read access token used for Composer private-package auth. Provider-agnostic — each site picks whether it is a GitLab, GitHub or Bitbucket token.</p>
+        @error('git_token')
         <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
         @enderror
     </div>

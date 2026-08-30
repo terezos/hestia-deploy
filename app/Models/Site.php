@@ -11,6 +11,7 @@ class Site extends Model
     protected $fillable = [
         'domain',
         'repo_url',
+        'git_provider',
         'branch',
         'database_name',
         'database_user',

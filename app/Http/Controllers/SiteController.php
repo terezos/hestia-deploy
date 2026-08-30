@@ -130,6 +130,7 @@ class SiteController extends Controller
             'hestia_server_id' => 'required|exists:hestia_servers,id',
             'attach_to_hestia_username' => 'nullable|string',
             'repo_url' => 'required|string',
+            'git_provider' => 'nullable|in:gitlab,github,bitbucket',
             'branch' => 'required|string',
             'php_version' => 'required|in:8.2,8.3,7.4,8.4',
             'ssl_enabled' => 'boolean',
@@ -460,6 +461,28 @@ class SiteController extends Controller
         }
     }
 
+    /**
+     * Verify the shared secret the way the sending provider sends it: GitLab as a
+     * plain X-Gitlab-Token header, GitHub as an HMAC of the raw body. Bitbucket has
+     * no secret mechanism, so those sites are protected by the URL token alone.
+     */
+    protected function webhookSourceVerified(Request $request): bool
+    {
+        $secret = (string) config('hestia.webhook_header_token');
+
+        if ($gitlabToken = $request->header('X-Gitlab-Token')) {
+            return hash_equals($secret, (string) $gitlabToken);
+        }
+
+        if ($signature = $request->header('X-Hub-Signature-256')) {
+            return hash_equals('sha256=' . hash_hmac('sha256', $request->getContent(), $secret), (string) $signature);
+        }
+
+        // ponytail: Bitbucket sends no secret at all. Its own IP allowlist plus the
+        // 32-char URL token is the whole check; drop this branch if you never use it.
+        return $request->hasHeader('X-Event-Key') && $request->hasHeader('X-Hook-UUID');
+    }
+
     public function deployWebhook(Request $request, Site $site, string $token)
     {
         // Both comparisons use hash_equals: this endpoint is unauthenticated and
@@ -467,10 +490,7 @@ class SiteController extends Controller
         $tokenValid = is_string($site->webhook_token)
             && hash_equals($site->webhook_token, $token);
 
-        $headerValid = hash_equals(
-            (string) config('hestia.webhook_header_token'),
-            (string) $request->header('X-Gitlab-Token')
-        );
+        $headerValid = $this->webhookSourceVerified($request);
 
         if (! $tokenValid || ! $headerValid) {
             return response()->json([

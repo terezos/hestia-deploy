@@ -278,7 +278,7 @@
                                           class="w-full font-mono text-xs bg-gray-50 border border-gray-200 rounded p-2 resize-none"></textarea>
                                 <button type="button" onclick="copyToClipboard(document.getElementById('deployKeyText').value, this)"
                                         class="mt-1 text-xs text-gray-500 hover:text-gray-700">Copy</button>
-                                <p class="text-xs text-gray-500 mt-1">Add this as a Deploy Key in your GitLab repo (Settings → Repository → Deploy Keys).</p>
+                                <p class="text-xs text-gray-500 mt-1">Add this as a deploy key in your repo (GitLab: Settings → Repository → Deploy Keys; GitHub: Settings → Deploy keys; Bitbucket: Repository settings → Access keys).</p>
                             </div>
                         </div>
                     </div>
@@ -304,7 +304,7 @@
                 </div>
             </div>
 
-            {{-- GitLab Webhook Configuration --}}
+            {{-- Deploy Webhook Configuration --}}
             @if($site->status === 'active')
                     <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-6">
                         <h3 class="text-lg font-semibold text-gray-900 flex items-center mb-4">
@@ -313,12 +313,12 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                       d="M13 10V3L4 14h7v7l9-11h-7z"/>
                             </svg>
-                            &nbsp;GitLab Webhook
+                            &nbsp;Deploy Webhook
                         </h3>
                         <div
                             class="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg p-4 border border-purple-200">
                             <p class="text-sm text-gray-700 mb-4">
-                                Use this webhook URL in your GitLab repository settings to trigger automatic deployments
+                                Use this webhook URL in your repository settings to trigger automatic deployments
                                 when you push code.
                             </p>
                             @if($site->webhook_token)

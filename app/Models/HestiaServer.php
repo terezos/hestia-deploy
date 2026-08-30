@@ -16,7 +16,7 @@ class HestiaServer extends Model
         'ssh_user',
         'ssh_password',
         'ssh_private_key',
-        'gitlab_token',
+        'git_token',
         'default_package',
         'is_active',
     ];
@@ -26,7 +26,7 @@ class HestiaServer extends Model
         'secret_key' => 'encrypted',
         'ssh_password' => 'encrypted',
         'ssh_private_key' => 'encrypted',
-        'gitlab_token' => 'encrypted',
+        'git_token' => 'encrypted',
         'is_active' => 'boolean',
     ];
 
@@ -35,7 +35,7 @@ class HestiaServer extends Model
         'secret_key',
         'ssh_password',
         'ssh_private_key',
-        'gitlab_token',
+        'git_token',
     ];
 
     public function sites(): HasMany

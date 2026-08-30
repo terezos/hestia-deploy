@@ -38,7 +38,7 @@ class HestiaServerController extends Controller
         $validated = $this->validateServer($request, $server);
 
         // Blank secret fields on update mean "keep the existing value".
-        foreach (['access_key', 'secret_key', 'ssh_password', 'ssh_private_key', 'gitlab_token'] as $secretField) {
+        foreach (['access_key', 'secret_key', 'ssh_password', 'ssh_private_key', 'git_token'] as $secretField) {
             if (empty($validated[$secretField])) {
                 unset($validated[$secretField]);
             }
@@ -79,7 +79,7 @@ class HestiaServerController extends Controller
             'ssh_user' => 'required|string|max:255',
             'ssh_password' => 'nullable|string',
             'ssh_private_key' => 'nullable|string',
-            'gitlab_token' => 'nullable|string',
+            'git_token' => 'nullable|string',
             'default_package' => 'nullable|string|max:255',
             'is_active' => 'boolean',
         ]);

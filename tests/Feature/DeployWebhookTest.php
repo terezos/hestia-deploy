@@ -65,4 +65,23 @@ class DeployWebhookTest extends TestCase
         $this->postJson("/webhook/{$site->id}/{$site->webhook_token}")
             ->assertStatus(403);
     }
+
+    public function test_it_accepts_a_valid_github_signature_and_rejects_a_forged_one(): void
+    {
+        $site = $this->site();
+        $payload = json_encode(['ref' => 'refs/heads/main']);
+        $secret = config('hestia.webhook_header_token');
+
+        // Valid signature clears the source check; the deploy itself then fails on SSH,
+        // which is enough to prove the 403 is gone.
+        $this->call('POST', "/webhook/{$site->id}/{$site->webhook_token}", [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X_HUB_SIGNATURE_256' => 'sha256=' . hash_hmac('sha256', $payload, $secret),
+        ], $payload)->assertStatus(500);
+
+        $this->call('POST', "/webhook/{$site->id}/{$site->webhook_token}", [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X_HUB_SIGNATURE_256' => 'sha256=' . hash_hmac('sha256', $payload, 'wrong-secret'),
+        ], $payload)->assertStatus(403);
+    }
 }

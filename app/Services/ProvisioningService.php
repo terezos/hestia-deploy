@@ -14,7 +14,7 @@ class ProvisioningService
     protected mixed $serverUser;
     protected mixed $serverSshKey;
     protected mixed $serverPassword;
-    protected mixed $gitlabToken;
+    protected mixed $gitToken;
     protected mixed $defaultPackage;
 
     protected bool $isOpencart = false;
@@ -41,12 +41,12 @@ class ProvisioningService
         $this->serverUser = $server->ssh_user;
         $this->serverPassword = $server->ssh_password;
         $this->serverSshKey = $server->ssh_private_key;
-        $this->gitlabToken = $server->gitlab_token;
+        $this->gitToken = $server->git_token;
         $this->defaultPackage = $server->default_package;
     }
 
     /**
-     * Generate (if missing) and return the domain-specific deploy key used for GitLab
+     * Generate (if missing) and return the domain-specific deploy key used for Git
      * access. Works before a Site row exists (during site creation) or after (to
      * recover/view the key for an already-created site).
      * @throws Exception
@@ -337,6 +337,52 @@ class ProvisioningService
      * Load the stored SSH key as a private key, or null if unset, unparseable, or
      * actually a public key (a common mistake: pasting the .pub file by accident).
      */
+    /**
+     * Composer auth.json contents for this site's git host, or null when the server
+     * has no token stored. The provider picks the auth scheme; the host always comes
+     * from the repo URL so self-hosted GitLab/Bitbucket installs work too.
+     */
+    protected function composerAuthJson(Site $site): ?string
+    {
+        if (empty($this->gitToken)) {
+            return null;
+        }
+
+        $host = $this->gitHost($site->repo_url);
+        $provider = $site->git_provider ?: $this->detectGitProvider($host);
+
+        $auth = match ($provider) {
+            'github' => ['github-oauth' => [$host => $this->gitToken]],
+            'bitbucket' => ['http-basic' => [$host => ['username' => 'x-token-auth', 'password' => $this->gitToken]]],
+            default => ['gitlab-token' => [$host => $this->gitToken]],
+        };
+
+        return json_encode($auth, JSON_UNESCAPED_SLASHES);
+    }
+
+    /** Host out of either "git@host:path.git" or "https://host/path.git". */
+    protected function gitHost(string $repoUrl): string
+    {
+        if (preg_match('#^[^@/]+@([^:/]+)#', $repoUrl, $m)) {
+            return $m[1];
+        }
+
+        return parse_url($repoUrl, PHP_URL_HOST) ?: 'gitlab.com';
+    }
+
+    protected function detectGitProvider(string $host): string
+    {
+        foreach (['github', 'bitbucket', 'gitlab'] as $provider) {
+            if (str_contains($host, $provider)) {
+                return $provider;
+            }
+        }
+
+        // ponytail: self-hosted installs are overwhelmingly GitLab; set the site's
+        // provider explicitly when they are not.
+        return 'gitlab';
+    }
+
     protected function loadSshPrivateKey(): ?\phpseclib3\Crypt\Common\PrivateKey
     {
         if (empty($this->serverSshKey)) {
@@ -724,14 +770,7 @@ do
 
         cd $WORK_TREE
 
-        # Create auth.json if needed
-        if [ ! -f "$WORK_TREE/../auth.json" ]; then
-            echo '{"gitlab-token":{"gitlab.com":"GITLAB_TOKEN_PLACEHOLDER"}}' > $WORK_TREE/../auth.json
-            chmod 600 $WORK_TREE/../auth.json
-            chown HESTIA_USERNAME_PLACEHOLDER:HESTIA_USERNAME_PLACEHOLDER $WORK_TREE/../auth.json
-        fi
-
-        # Fix permissions
+AUTH_BLOCK_PLACEHOLDER        # Fix permissions
         echo "Fixing permissions..."
         chown -R HESTIA_USERNAME_PLACEHOLDER:HESTIA_USERNAME_PLACEHOLDER /home/HESTIA_USERNAME_PLACEHOLDER/web/DOMAIN_PLACEHOLDER/public_html/
         find /home/HESTIA_USERNAME_PLACEHOLDER/web/DOMAIN_PLACEHOLDER/public_html/ -type f -exec chmod 644 {} \;
@@ -747,7 +786,17 @@ BASH;
         $hookContent = str_replace('DOMAIN_PLACEHOLDER', $domain, $hookContent);
         $hookContent = str_replace('BRANCH_PLACEHOLDER', $site->branch, $hookContent);
         $hookContent = str_replace('HESTIA_USERNAME_PLACEHOLDER', $site->hestia_username, $hookContent);
-        $hookContent = str_replace('GITLAB_TOKEN_PLACEHOLDER', $this->gitlabToken, $hookContent);
+        $authJson = $this->composerAuthJson($site);
+        $authBlock = $authJson === null ? '' : <<<BASH
+        # Create auth.json if needed
+        if [ ! -f "\$WORK_TREE/../auth.json" ]; then
+            echo '{$authJson}' > \$WORK_TREE/../auth.json
+            chmod 600 \$WORK_TREE/../auth.json
+            chown {$site->hestia_username}:{$site->hestia_username} \$WORK_TREE/../auth.json
+        fi
+
+BASH;
+        $hookContent = str_replace('AUTH_BLOCK_PLACEHOLDER', $authBlock, $hookContent);
 
         // Use base64 to safely transfer the content
         $base64Content = base64_encode($hookContent);
@@ -774,7 +823,6 @@ BASH;
         $sshKeyPath = $this->resolveSshHomeDir() . "/.ssh/id_rsa_{$safeKeyName}";
 
         $this->sshCommand("mkdir -p {$workTree}");
-        $this->sshCommand("ssh-keyscan -H gitlab.com >> ~/.ssh/known_hosts 2>/dev/null || true");
 
         // Use domain-specific SSH key for Git operations
         $gitCommands = "cd {$gitDir} && " .
@@ -798,15 +846,11 @@ BASH;
         $path = "/home/{$site->hestia_username}/web/{$domain}/public_html";
         $pathLaravel = "/home/{$site->hestia_username}/web/{$domain}/public_html/framework";
 
-        $authJson = json_encode([
-            'gitlab-token' => [
-                'gitlab.com' => $this->gitlabToken
-            ]
-        ]);
-
-        $this->sshCommand("echo '{$authJson}' > {$path}/auth.json");
-        $this->sshCommand("chmod 600 {$path}/auth.json");
-        $this->sshCommand("chown {$site->hestia_username}:{$site->hestia_username} {$path}/auth.json");
+        if ($authJson = $this->composerAuthJson($site)) {
+            $this->sshCommand("echo '{$authJson}' > {$path}/auth.json");
+            $this->sshCommand("chmod 600 {$path}/auth.json");
+            $this->sshCommand("chown {$site->hestia_username}:{$site->hestia_username} {$path}/auth.json");
+        }
 
         if ($site->framework == 'opencart_default'){
             $this->sshCommand("cd {$path} && /usr/bin/php{$site->php_version} /usr/local/bin/composer install --ignore-platform-reqs");

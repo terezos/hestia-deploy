@@ -156,15 +156,31 @@
                                 <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                                 </svg>
-                                Get SSH Key for GitLab
+                                Get Deploy SSH Key
                             </button>
                         </div>
                         <input type="text" name="repo_url" value="{{ old('repo_url') }}"
-                               placeholder="git@gitlab.com:username/repository.git"
+                               placeholder="git@gitlab.com:username/repository.git or git@github.com:username/repository.git"
                                class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                                required>
                         <p class="text-xs text-gray-500 mt-1.5">SSH or HTTPS URL of your Git repository</p>
                         @error('repo_url')
+                        <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    {{-- Git Provider --}}
+                    <div class="mb-6">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Git Provider</label>
+                        <select name="git_provider"
+                                class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150">
+                            <option value="">Auto-detect from repository URL</option>
+                            @foreach (['gitlab' => 'GitLab', 'github' => 'GitHub', 'bitbucket' => 'Bitbucket'] as $value => $label)
+                                <option value="{{ $value }}" @selected(old('git_provider') === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1.5">Only decides how the server's Git token is written into <code>auth.json</code> for Composer. Deploys themselves use the per-domain SSH key and work with any provider.</p>
+                        @error('git_provider')
                         <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                         @enderror
                     </div>
@@ -186,7 +202,7 @@
                                class="w-full border-2 border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-150"
                                required>
                         <datalist id="branchesList"></datalist>
-                        <p class="text-xs text-gray-500 mt-1.5" id="branchHint">Branch to deploy from your repository — add the SSH deploy key to GitLab first, then click "Fetch Branches" to list what's available</p>
+                        <p class="text-xs text-gray-500 mt-1.5" id="branchHint">Branch to deploy from your repository — add the SSH deploy key to your repository first, then click "Fetch Branches" to list what's available</p>
                         @error('branch')
                         <p class="text-red-600 text-sm mt-1">{{ $message }}</p>
                         @enderror
@@ -327,10 +343,10 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <div class="text-sm text-orange-800">
-                                <p class="font-semibold mb-1">Add this SSH key to your GitLab repository</p>
-                                <p>Copy the key below and add it to your GitLab repository's Deploy Keys:</p>
+                                <p class="font-semibold mb-1">Add this SSH key to your Git repository</p>
+                                <p>Copy the key below and add it to your repository's deploy keys (GitLab: Settings → Repository → Deploy Keys; GitHub: Settings → Deploy keys; Bitbucket: Repository settings → Access keys):</p>
                                 <ol class="list-decimal ml-4 mt-2 space-y-1">
-                                    <li>Go to your GitLab repository</li>
+                                    <li>Go to your Git repository</li>
                                     <li>Navigate to Settings → Repository → Deploy Keys</li>
                                     <li>Paste the key and give it write access if needed</li>
                                     <li>Save the deploy key</li>
@@ -548,7 +564,7 @@
                     ? `Found ${data.branches.length} branch(es) — pick from the list or type your own`
                     : 'No branches found on that repository';
             } catch (e) {
-                hint.textContent = e.message || 'Failed to fetch branches. Make sure the SSH deploy key was added to GitLab first.';
+                hint.textContent = e.message || 'Failed to fetch branches. Make sure the SSH deploy key was added to the repository first.';
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = originalContent;
