@@ -143,8 +143,10 @@ return [
     |
     */
 
-    'features' => [
-        Features::registration(),
+    'features' => array_filter([
+        // ponytail: dropping the feature also drops the /register route, so the
+        // "Register" link in the login view (guarded by Route::has) hides itself.
+        env('HESTIA_REGISTRATION_ENABLED', true) ? Features::registration() : null,
         Features::resetPasswords(),
         // Features::emailVerification(),
         Features::updateProfileInformation(),
@@ -154,6 +156,6 @@ return [
             'confirmPassword' => true,
             // 'window' => 0,
         ]),
-    ],
+    ]),
 
 ];
