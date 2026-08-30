@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Jobs\DatabaseBackupJob;
 use App\Jobs\ImagesBackupJob;
+use App\Jobs\ProvisionSiteJob;
 use App\Models\HestiaServer;
 use App\Models\Site;
 use App\Models\SiteBackup;
@@ -176,11 +177,7 @@ class SiteController extends Controller
 
         $site = Site::create($validated);
 
-        dispatch(/**
-         * @throws Exception
-         */ function () use ($site) {
-            app(ProvisioningService::class)->provision($site);
-        })->afterResponse();
+        ProvisionSiteJob::dispatch($site->id);
 
         return redirect()->route('sites.show', $site)
             ->with('success', 'Site provisioning started!');
@@ -267,9 +264,7 @@ class SiteController extends Controller
 
         $site->update(['status' => 'pending']);
 
-        dispatch(function () use ($site) {
-            app(ProvisioningService::class)->provision($site);
-        })->afterResponse();
+        ProvisionSiteJob::dispatch($site->id);
 
         return response()->json([
             'success' => true,

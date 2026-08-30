@@ -67,7 +67,9 @@ return [
             'driver' => 'redis',
             'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
             'queue' => env('REDIS_QUEUE', 'default'),
-            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 90),
+            // Must exceed the longest job timeout (ProvisionSiteJob/ImagesBackupJob,
+            // both 3600s) or the queue re-runs a job that is still running.
+            'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 3900),
             'block_for' => null,
             'after_commit' => false,
         ],
