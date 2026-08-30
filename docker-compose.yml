@@ -1,0 +1,55 @@
+services:
+  hestiacp_web:
+    container_name: hestiacp_web
+    platform: linux/amd64
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/app
+    user: root
+    restart: always
+    environment:
+      - WEB_ALIAS_DOMAIN=hestiacp.loc
+      - WEB_DOCUMENT_ROOT=/app/public
+      - PHP_DATE_TIMEZONE=EST
+      - PHP_DISPLAY_ERRORS=1
+      - PHP_MEMORY_LIMIT=2048M
+      - PHP_MAX_EXECUTION_TIME=300
+      - PHP_POST_MAX_SIZE=500M
+      - PHP_UPLOAD_MAX_FILESIZE=1024M
+      - PHP_DEBUGGER=xdebug
+      - XDEBUG_REMOTE_CONNECT_BACK=0
+      - XDEBUG_REMOTE_HOST=host.docker.internal
+      - XDEBUG_REMOTE_PORT=9000
+      - XDEBUG_CLIENT_PORT=9000
+      - XDEBUG_CLIENT_HOST=host.docker.internal
+      - php.xdebug.mode=debug
+      - php.short_open_tag=On
+      - php.expose_php=Off
+      - php.error_reporting="E_ALL & ~E_NOTICE & ~E_DEPRECATED"
+      - php.xdebug.idekey=PHPSTORM
+    ports:
+        - "80:80"
+        - "443:443"
+        - "8000:8000"
+  hestiacp_db:
+    container_name: hestiacp_db
+    platform: linux/arm64/v8
+    image: mariadb:10
+    restart: always
+    volumes:
+      - ./db-data:/var/lib/mysql:delegated
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=hestiacp
+    ports:
+      - "33068:3306"
+  hestiacp_redis:
+    image: redis:latest
+    container_name: hestiacp_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis-data:/data
